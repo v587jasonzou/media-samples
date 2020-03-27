@@ -16,16 +16,23 @@
 
 package com.example.android.mediarecorder;
 
+import android.Manifest;
+import android.graphics.Color;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.view.TextureView;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 import com.example.android.common.media.CameraHelper;
 
@@ -53,10 +60,23 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // 5.0以上系统状态栏透明
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Window window = getWindow();
+            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+            window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            window.setStatusBarColor(Color.TRANSPARENT);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        }
         setContentView(R.layout.main_activity);
 
         mPreview = findViewById(R.id.surface_view);
         captureButton = findViewById(R.id.button_capture);
+
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA,Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.RECORD_AUDIO}, 200);
     }
 
     /**
@@ -146,17 +166,29 @@ public class MainActivity extends AppCompatActivity {
         Camera.Parameters parameters = mCamera.getParameters();
         List<Camera.Size> mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
         List<Camera.Size> mSupportedVideoSizes = parameters.getSupportedVideoSizes();
+//        Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes,
+//                mSupportedPreviewSizes, mPreview.getWidth(), mPreview.getHeight());
+        //注意：相机默认为0度方向(横向，纵向为90度)，这里匹配时，VIEW大小以横向传入(宽传入高)
         Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes,
-                mSupportedPreviewSizes, mPreview.getWidth(), mPreview.getHeight());
+                mSupportedPreviewSizes, mPreview.getHeight(), mPreview.getWidth());
 
         // Use the same size for recording profile.
-        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
+        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_LOW);
         profile.videoFrameWidth = optimalSize.width;
         profile.videoFrameHeight = optimalSize.height;
 
         // likewise for the camera object itself.
+        //【note:设置相机预览尺寸，输出到预览View的图像数据，不一致会导致拉伸等问题】
         parameters.setPreviewSize(profile.videoFrameWidth, profile.videoFrameHeight);
+//        parameters.setPreviewSize(mPreview.getWidth(), mPreview.getHeight());
+//        ViewGroup.LayoutParams lp = mPreview.getLayoutParams();
+//        lp.height = profile.videoFrameHeight;
+//        lp.width = profile.videoFrameWidth;
+//        mPreview.setLayoutParams(lp);
         mCamera.setParameters(parameters);
+        //摄像头方向，默认为横向：0度
+        int degree = 90;
+        mCamera.setDisplayOrientation(degree);
         try {
             // Requires API level 11+, For backward compatibility use {@link setPreviewDisplay}
             // with {@link SurfaceView}
@@ -180,10 +212,11 @@ public class MainActivity extends AppCompatActivity {
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 
         // Step 3: Set a CamcorderProfile (requires API Level 8 or higher)
+        //同时设置输出视频尺寸
         mMediaRecorder.setProfile(profile);
 
         // Step 4: Set output file
-        mOutputFile = CameraHelper.getOutputMediaFile(CameraHelper.MEDIA_TYPE_VIDEO);
+        mOutputFile = CameraHelper.getOutputMediaFile(getApplicationContext(),CameraHelper.MEDIA_TYPE_VIDEO);
         if (mOutputFile == null) {
             return false;
         }
@@ -192,6 +225,11 @@ public class MainActivity extends AppCompatActivity {
 
         // Step 5: Prepare configured MediaRecorder
         try {
+            /**
+             * @see  degree
+             */
+            //设置输出视频在播放时的方向角度(实测，可行 Android7.1 - 10,部分视频播放器，自动适配至全屏)
+            mMediaRecorder.setOrientationHint(degree);
             mMediaRecorder.prepare();
         } catch (IllegalStateException e) {
             Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());

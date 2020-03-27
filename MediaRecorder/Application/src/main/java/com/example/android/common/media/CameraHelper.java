@@ -17,6 +17,7 @@
 package com.example.android.common.media;
 
 import android.annotation.TargetApi;
+import android.content.Context;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Environment;
@@ -149,18 +150,23 @@ public class CameraHelper {
      * Creates a media file in the {@code Environment.DIRECTORY_PICTURES} directory. The directory
      * is persistent and available to other applications like gallery.
      *
+     *
+     * @param applicationContext
      * @param type Media type. Can be video or image.
      * @return A file object pointing to the newly created file.
      */
-    public  static File getOutputMediaFile(int type){
+    public  static File getOutputMediaFile(Context applicationContext, int type){
         // To be safe, you should check that the SDCard is mounted
         // using Environment.getExternalStorageState() before doing this.
         if (!Environment.getExternalStorageState().equalsIgnoreCase(Environment.MEDIA_MOUNTED)) {
             return  null;
         }
 
+        //SD卡pictures目录下
         File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES), "CameraSample");
+//        File mediaStorageDir = applicationContext.getExternalFilesDir(
+//                Environment.DIRECTORY_PICTURES);
         // This location works best if you want the created images to be shared
         // between applications and persist after your app has been uninstalled.
 
