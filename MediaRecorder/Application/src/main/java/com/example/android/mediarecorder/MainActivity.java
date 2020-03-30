@@ -156,9 +156,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean prepareVideoRecorder() {
+        //相机id
+        int cameraId=0;
+        int numberOfCameras = Camera.getNumberOfCameras();
+        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+        for (int i = 0; i < numberOfCameras; i++) {
+            Camera.getCameraInfo(i, cameraInfo);
+            //前置 or 后置
+//            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                cameraId = i;
+            }
+        }
 
-        // BEGIN_INCLUDE (configure_preview)
-        mCamera = CameraHelper.getDefaultCameraInstance();
+        int windowRotation = getWindowManager().getDefaultDisplay()
+                                               .getRotation();
+
+        //// region (configure_preview)
+//        mCamera = CameraHelper.getDefaultCameraInstance();
+        mCamera = CameraHelper.getCameraInstance(cameraId);
 
         // We need to make sure that our preview and recording video size are supported by the
         // camera. Query camera to find all the sizes and choose the optimal size given the
@@ -173,22 +189,19 @@ public class MainActivity extends AppCompatActivity {
                 mSupportedPreviewSizes, mPreview.getHeight(), mPreview.getWidth());
 
         // Use the same size for recording profile.
-        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_LOW);
+        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
         profile.videoFrameWidth = optimalSize.width;
         profile.videoFrameHeight = optimalSize.height;
+
+        parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
 
         // likewise for the camera object itself.
         //【note:设置相机预览尺寸，输出到预览View的图像数据，不一致会导致拉伸等问题】
         parameters.setPreviewSize(profile.videoFrameWidth, profile.videoFrameHeight);
-//        parameters.setPreviewSize(mPreview.getWidth(), mPreview.getHeight());
-//        ViewGroup.LayoutParams lp = mPreview.getLayoutParams();
-//        lp.height = profile.videoFrameHeight;
-//        lp.width = profile.videoFrameWidth;
-//        mPreview.setLayoutParams(lp);
         mCamera.setParameters(parameters);
         //摄像头方向，默认为横向：0度
-        int degree = 90;
-        mCamera.setDisplayOrientation(degree);
+        //NOTE:前置摄像头，会执行水平镜像翻转
+        mCamera.setDisplayOrientation(CameraHelper.getCameraDisplayOrientation(cameraId,windowRotation));
         try {
             // Requires API level 11+, For backward compatibility use {@link setPreviewDisplay}
             // with {@link SurfaceView}
@@ -197,7 +210,7 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "Surface texture is unavailable or unsuitable" + e.getMessage());
             return false;
         }
-        // END_INCLUDE (configure_preview)
+        //  endregion (configure_preview)
 
 
         // BEGIN_INCLUDE (configure_media_recorder)
@@ -229,7 +242,7 @@ public class MainActivity extends AppCompatActivity {
              * @see  degree
              */
             //设置输出视频在播放时的方向角度(实测，可行 Android7.1 - 10,部分视频播放器，自动适配至全屏)
-            mMediaRecorder.setOrientationHint(degree);
+            mMediaRecorder.setOrientationHint(CameraHelper.getVideoPlaybackOrientation(cameraId,windowRotation));
             mMediaRecorder.prepare();
         } catch (IllegalStateException e) {
             Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
