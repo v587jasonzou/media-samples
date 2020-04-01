@@ -156,18 +156,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean prepareVideoRecorder() {
-        //相机id
-        int cameraId=0;
-        int numberOfCameras = Camera.getNumberOfCameras();
-        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
-        for (int i = 0; i < numberOfCameras; i++) {
-            Camera.getCameraInfo(i, cameraInfo);
-            //前置 or 后置
-//            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
-                cameraId = i;
-            }
-        }
+        int cameraId = CameraHelper.getCameraId(Camera.CameraInfo.CAMERA_FACING_BACK);
 
         int windowRotation = getWindowManager().getDefaultDisplay()
                                                .getRotation();

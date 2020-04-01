@@ -260,4 +260,19 @@ public class CameraHelper {
         return result;
     }
 
+    public static int getCameraId(int facing) {
+        //相机id
+        int cameraId=0;
+        int numberOfCameras = Camera.getNumberOfCameras();
+        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+        for (int i = 0; i < numberOfCameras; i++) {
+            Camera.getCameraInfo(i, cameraInfo);
+            //前置 or 后置
+            if (cameraInfo.facing == facing) {
+                cameraId = i;
+            }
+        }
+        return cameraId;
+    }
+
 }
