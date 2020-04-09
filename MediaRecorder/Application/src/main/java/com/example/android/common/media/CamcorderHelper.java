@@ -24,8 +24,12 @@ import android.os.Environment;
 import android.util.Log;
 import android.view.Surface;
 
+import com.blankj.utilcode.util.LogUtils;
+
 import java.io.File;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -33,7 +37,7 @@ import java.util.Locale;
 /**
  * Camera related utilities.
  */
-public class CameraHelper {
+public class CamcorderHelper {
 
     public static final int MEDIA_TYPE_IMAGE = 1;
     public static final int MEDIA_TYPE_VIDEO = 2;
@@ -273,6 +277,43 @@ public class CameraHelper {
             }
         }
         return cameraId;
+    }
+
+    /**
+     * 获取所有支持的返回视频尺寸
+     *
+     * @param list
+     * @param minHeight
+     * @return
+     */
+    public static Camera.Size getPropSizeForHeight(List<Camera.Size> list, int minHeight) {
+        Collections.sort(list, new CameraAscendSizeComparatorForHeight());
+
+        int i = 0;
+        for (Camera.Size s : list) {
+            if ((s.height >= minHeight)) {
+                LogUtils.i("s.height===" + s.height);
+                break;
+            }
+            i++;
+        }
+        if (i == list.size()) {
+            i = 0;//如果没找到，就选最小的size
+        }
+        return list.get(i);
+    }
+
+    //升序 按照高度
+    public static class CameraAscendSizeComparatorForHeight implements Comparator<Camera.Size> {
+        public int compare(Camera.Size lhs, Camera.Size rhs) {
+            if (lhs.height == rhs.height) {
+                return 0;
+            } else if (lhs.height > rhs.height) {
+                return 1;
+            } else {
+                return -1;
+            }
+        }
     }
 
 }
